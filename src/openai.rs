@@ -1,4 +1,7 @@
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
+use reqwest::{
+    StatusCode,
+    header::{AUTHORIZATION, HeaderMap, HeaderValue},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
@@ -6,6 +9,14 @@ pub struct OpenAI {
     http: reqwest::Client,
     base_url: String,
 }
+
+#[derive(Clone)]
+pub struct OpenAIError {
+    status: StatusCode,
+    body: String,
+}
+
+pub type Result<T> = std::result::Result<T, OpenAIError>;
 
 impl OpenAI {
     pub fn new(api_key: &str) -> Result<Self> {
@@ -34,7 +45,17 @@ impl OpenAI {
             let body = resp.text().await.unwrap_or_default();
             return Err(Error::Api { status, body });
         }
+
         Ok(resp.json().await?)
+    }
+
+    pub async fn create_response(&self, req: &CreateModelResponseRequest) -> Result<ModelResponse> {
+        self.send(
+            self.http
+                .post(format!("{}/responses", self.base_url))
+                .json(req),
+        )
+        .await
     }
 
     // #[derive(Debug, Deserialize)]
@@ -56,4 +77,52 @@ impl OpenAI {
     //     self.send(self.http.post(format!("{}/users", self.base_url)).json(req))
     //         .await
     // }
+}
+
+// Reponses API
+// https://developers.openai.com/api/reference/resources/responses/methods/create
+
+// Reponses API - Request
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateModelResponseRequest {
+    model: String,
+    input: Vec<Message>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Message {
+    role: String,
+    content: Vec<InputTextMessageContent>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct InputTextMessageContent {
+    #[serde(rename = "type")]
+    type_: String,
+    text: String,
+}
+
+// Reponses API - Response
+#[derive(Clone, Debug, Deserialize)]
+pub struct ModelResponse {
+    id: String,
+    status: String,
+    output: Vec<ModelResponseOutput>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ModelResponseOutput {
+    id: String,
+    #[serde(rename = "type")]
+    type_: String,
+    status: String,
+    content: Vec<ModelResponseOutputContent>,
+    role: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ModelResponseOutputContent {
+    #[serde(rename = "type")]
+    type_: String,
+    text: String,
 }
