@@ -10,10 +10,12 @@ pub struct OpenAI {
     base_url: String,
 }
 
-#[derive(Clone)]
-pub struct OpenAIError {
-    status: StatusCode,
-    body: String,
+#[derive(Debug, thiserror::Error)]
+pub enum OpenAIError {
+    #[error("http error: {0}")]
+    Http(#[from] reqwest::Error),
+    #[error("api error {status}: {body}")]
+    Api { status: StatusCode, body: String },
 }
 
 pub type Result<T> = std::result::Result<T, OpenAIError>;
@@ -43,7 +45,7 @@ impl OpenAI {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(Error::Api { status, body });
+            return Err(OpenAIError::Api { status, body });
         }
 
         Ok(resp.json().await?)
@@ -85,44 +87,44 @@ impl OpenAI {
 // Reponses API - Request
 #[derive(Clone, Debug, Serialize)]
 pub struct CreateModelResponseRequest {
-    model: String,
-    input: Vec<Message>,
+    pub model: String,
+    pub input: Vec<Message>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Message {
-    role: String,
-    content: Vec<InputTextMessageContent>,
+    pub role: String,
+    pub content: Vec<InputTextMessageContent>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct InputTextMessageContent {
     #[serde(rename = "type")]
-    type_: String,
-    text: String,
+    pub type_: String,
+    pub text: String,
 }
 
 // Reponses API - Response
 #[derive(Clone, Debug, Deserialize)]
 pub struct ModelResponse {
-    id: String,
-    status: String,
-    output: Vec<ModelResponseOutput>,
+    pub id: String,
+    pub status: String,
+    pub output: Vec<ModelResponseOutput>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ModelResponseOutput {
-    id: String,
+    pub id: String,
     #[serde(rename = "type")]
-    type_: String,
-    status: String,
-    content: Vec<ModelResponseOutputContent>,
-    role: String,
+    pub type_: String,
+    pub status: Option<String>,
+    pub content: Vec<ModelResponseOutputContent>,
+    pub role: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ModelResponseOutputContent {
     #[serde(rename = "type")]
-    type_: String,
-    text: String,
+    pub type_: String,
+    pub text: String,
 }

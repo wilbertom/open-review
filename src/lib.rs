@@ -1,1 +1,1 @@
-mod openai;
+pub mod openai;
