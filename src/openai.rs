@@ -128,3 +128,20 @@ pub struct ModelResponseOutputContent {
     pub type_: String,
     pub text: String,
 }
+
+pub fn messages(model: String, messages: Vec<Message>) -> CreateModelResponseRequest {
+    CreateModelResponseRequest {
+        model: model,
+        input: messages,
+    }
+}
+
+pub fn user_message(text: String) -> Message {
+    Message {
+        role: "user".into(),
+        content: vec![InputTextMessageContent {
+            type_: "input_text".into(),
+            text: text,
+        }],
+    }
+}
