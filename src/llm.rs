@@ -33,11 +33,19 @@ impl LLM {
     }
 
     pub fn user_message(&self, text: String) -> Message {
+        self.message("user", text)
+    }
+
+    pub fn system_message(&self, text: String) -> Message {
+        self.message("system", text)
+    }
+
+    fn message(&self, role: &str, text: String) -> Message {
         Message {
-            role: "user".into(),
+            role: role.into(),
             content: vec![InputTextMessageContent {
                 type_: "input_text".into(),
-                text: text,
+                text,
             }],
         }
     }
