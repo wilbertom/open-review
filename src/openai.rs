@@ -18,10 +18,10 @@ pub enum OpenAIError {
     Api { status: StatusCode, body: String },
 }
 
-pub type Result<T> = std::result::Result<T, OpenAIError>;
+pub type OpenAIResult<T> = std::result::Result<T, OpenAIError>;
 
 impl OpenAI {
-    pub fn new(api_key: &str) -> Result<Self> {
+    pub fn new(api_key: &str) -> OpenAIResult<Self> {
         let mut headers = HeaderMap::new();
 
         let mut auth = HeaderValue::from_str(&format!("Bearer {api_key}")).unwrap();
@@ -40,7 +40,10 @@ impl OpenAI {
         })
     }
 
-    async fn send<T: for<'de> Deserialize<'de>>(&self, req: reqwest::RequestBuilder) -> Result<T> {
+    async fn send<T: for<'de> Deserialize<'de>>(
+        &self,
+        req: reqwest::RequestBuilder,
+    ) -> OpenAIResult<T> {
         let resp = req.send().await?;
         let status = resp.status();
         if !status.is_success() {
@@ -51,7 +54,10 @@ impl OpenAI {
         Ok(resp.json().await?)
     }
 
-    pub async fn create_response(&self, req: &CreateModelResponseRequest) -> Result<ModelResponse> {
+    pub async fn create_response(
+        &self,
+        req: &CreateModelResponseRequest,
+    ) -> OpenAIResult<ModelResponse> {
         self.send(
             self.http
                 .post(format!("{}/responses", self.base_url))
@@ -59,26 +65,6 @@ impl OpenAI {
         )
         .await
     }
-
-    // #[derive(Debug, Deserialize)]
-    // pub struct User {
-    //     pub id: u64,
-    //     pub name: String,
-    // }
-    // pub async fn get_user(&self, id: u64) -> Result<User> {
-    //     self.send(self.http.get(format!("{}/users/{id}", self.base_url)))
-    //         .await
-    // }
-    //
-
-    // #[derive(Debug, Serialize)]
-    // pub struct CreateUser {
-    //     pub name: String,
-    // }
-    // pub async fn create_user(&self, req: &CreateUser) -> Result<User> {
-    //     self.send(self.http.post(format!("{}/users", self.base_url)).json(req))
-    //         .await
-    // }
 }
 
 // Reponses API
@@ -127,21 +113,4 @@ pub struct ModelResponseOutputContent {
     #[serde(rename = "type")]
     pub type_: String,
     pub text: String,
-}
-
-pub fn messages(model: String, messages: Vec<Message>) -> CreateModelResponseRequest {
-    CreateModelResponseRequest {
-        model: model,
-        input: messages,
-    }
-}
-
-pub fn user_message(text: String) -> Message {
-    Message {
-        role: "user".into(),
-        content: vec![InputTextMessageContent {
-            type_: "input_text".into(),
-            text: text,
-        }],
-    }
 }

@@ -1,22 +1,20 @@
 use std::env;
 
-use open_review::openai::{OpenAI, messages, user_message};
+use open_review::llm::LLM;
+
+const DEFAULT_OPENAI_MODEL: &str = "gpt-6-luna";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let openai_api_key =
         env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable is missing");
+    let openai_model =
+        env::var("OPENAI_MODEL").unwrap_or_else(|_| DEFAULT_OPENAI_MODEL.to_string());
 
-    let open_ai_default_model = "gpt-6-luna".into();
-    let open_ai_model = env::var("OPENAI_MODEL").unwrap_or_else(|_| open_ai_default_model);
+    let llm = LLM::new(&openai_api_key, &openai_model);
 
-    let request = messages(
-        open_ai_model,
-        vec![user_message("Say hello in one sentence.".into())],
-    );
-
-    let openai = OpenAI::new(&openai_api_key).expect("Failed to create OpenAI client.");
-    let response = openai.create_response(&request).await?;
+    let messages = llm.messages(vec![llm.user_message("Say hello in one sentence.".into())]);
+    let response = llm.invoke(&messages).await?;
 
     println!("{response:#?}");
 
